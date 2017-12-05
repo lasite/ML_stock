@@ -2,7 +2,7 @@ import math
 import tensorflow as tf
 NUM_CLASSES=2
 PERIOD_SIZE=5
-FEATURE_SIZE=19
+FEATURE_SIZE=17
 NUM_FEATURES=PERIOD_SIZE * FEATURE_SIZE
 
 def inference(market_data, hidden1_units, hidden2_units):

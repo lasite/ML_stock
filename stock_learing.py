@@ -90,13 +90,12 @@ def do_eval(sess,
 
 def run_training():
   """Train STOCk for a number of steps."""
-
   #df_002024=ts.get_hist_data('002024',start='2014-01-01')
-  df_002024=ts.get_hist_data('002024',start='2014-01-01')
+  df_002024=sohu_dc.get_hist_data('002024','20140101','20171204')
   df_002024_norm=(df_002024-df_002024.min())/(df_002024.max()-df_002024.min())
 
-  df_002024_test=df_002024_norm[0:80]
-  df_002024_train=df_002024_norm[80:df_002024.index.size]
+  df_002024_test=df_002024_norm[0:100]
+  df_002024_train=df_002024_norm[100:df_002024.index.size]
 
   market_data={'train':{},'test':{}}
   market_data['train']['features']=[]
@@ -124,18 +123,14 @@ def run_training():
       else:
           market_data['test']['lables'].append(1)
           
-  
-  
-
   # Tell TensorFlow that the model will be built into the default Graph.
   with tf.Graph().as_default():
     dataset_train = tf.data.Dataset.from_tensor_slices((np.array(market_data['train']['features']),np.array(market_data['train']['lables'])))
     dataset_test = tf.data.Dataset.from_tensor_slices((np.array(market_data['test']['features']),np.array(market_data['test']['lables'])))
 
-    FLAGS.batch_size = len(market_data['train']['features'])//20
     print('batch size %d'%(FLAGS.batch_size))
-    dataset_train = dataset_train.batch(FLAGS.batch_size)
-    dataset_test = dataset_test.batch(FLAGS.batch_size)
+    dataset_train = dataset_train.repeat().batch(FLAGS.batch_size)
+    dataset_test = dataset_test.repeat().batch(FLAGS.batch_size)
     iterator = tf.data.Iterator.from_structure(dataset_train.output_types,
                                            dataset_train.output_shapes)
     next_element = iterator.get_next()
@@ -180,13 +175,11 @@ def run_training():
     sess.run(init)
     sess.run(training_init_op)
     # Start the training loop.
-    for step in xrange(FLAGS.max_epoch):
+    for step in xrange(FLAGS.max_steps):
         start_time = time.time()
         
-        while True:
-            try:
-                x,y=sess.run(next_element)
-                feed_dict = fill_feed_dict(x,y,
+        x,y=sess.run(next_element)
+        feed_dict = fill_feed_dict(x,y,
                                  features_placeholder,
                                  labels_placeholder)
                 # Run one step of the model.  The return values are the activations
@@ -194,24 +187,23 @@ def run_training():
                 # inspect the values of your Ops or variables, you may include them
                 # in the list passed to sess.run() and the value tensors will be
                 # returned in the tuple from the call.
-                _, loss_value = sess.run([train_op, loss],
+        _, loss_value = sess.run([train_op, loss],
                                feed_dict=feed_dict)
-
-            except tf.errors.OutOfRangeError:
+        
+        duration = time.time() - start_time
+        
+        if step % 100 == 0:       
                 # Write the summaries and print an overview fairly often.
-                duration = time.time() - start_time
-                print('Epoch %d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
+                print('Step %d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
                 # Update the events file.
                 summary_str = sess.run(summary, feed_dict=feed_dict)
                 summary_writer.add_summary(summary_str, step)
                 summary_writer.flush()
                 # reinit the iterator
                 sess.run(training_init_op)
-                break
 
-
-      # Save a checkpoint and evaluate the model periodically.
-        if (step + 1) % 10 == 0 or (step + 1) == FLAGS.max_epoch:
+        # Save a checkpoint and evaluate the model periodically.
+        if (step + 1) % 1000 == 0 or (step + 1) == FLAGS.max_steps:
             checkpoint_file = os.path.join(FLAGS.log_dir, 'model.ckpt')
             saver.save(sess, checkpoint_file, global_step=step)
         # Evaluate against the training set.
@@ -246,10 +238,10 @@ if __name__ == '__main__':
       help='Initial learning rate.'
   )
   parser.add_argument(
-      '--max_epoch',
+      '--max_steps',
       type=int,
-      default=100,
-      help='Number of epochs to run trainer.'
+      default=2000,
+      help='Number of steps to run trainer.'
   )
   parser.add_argument(
       '--hidden1',
