@@ -24,7 +24,7 @@ def inference(market_data, hidden1_units, hidden2_units):
         name='weights')
     biases = tf.Variable(tf.zeros([hidden1_units]),
                          name='biases')
-    hidden1 = tf.nn.relu(tf.matmul(market_data, weights) + biases)
+    hidden1 = tf.nn.tanh(tf.matmul(market_data, weights) + biases)
   # Hidden 2
   with tf.name_scope('hidden2'):
     weights = tf.Variable(
@@ -33,7 +33,7 @@ def inference(market_data, hidden1_units, hidden2_units):
         name='weights')
     biases = tf.Variable(tf.zeros([hidden2_units]),
                          name='biases')
-    hidden2 = tf.nn.relu(tf.matmul(hidden1, weights) + biases)
+    hidden2 = tf.nn.tanh(tf.matmul(hidden1, weights) + biases)
   # Linear
   with tf.name_scope('softmax_linear'):
     weights = tf.Variable(

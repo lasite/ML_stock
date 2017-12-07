@@ -70,13 +70,14 @@ def do_eval(sess,
     labels_placeholder: The labels placeholder.
     data_set: a dict contains features and labels
   """
-  eval_data = tf.data.Dataset.from_tensor_slices((np.array(dataset['features']),np.array(dataset['lables'])))
-  eval_data = eval_data.batch(FLAGS.batch_size)
+#  eval_data = tf.data.Dataset.from_tensor_slices((np.array(dataset['features']),np.array(dataset['lables'])))
+#  eval_data = eval_data.repeat()
+#  eval_data = eval_data.batch(FLAGS.batch_size)
   # And run one epoch of eval.
   true_count = 0  # Counts the number of correct predictions.
-  steps_per_epoch = len(dataset['features']) // FLAGS.batch_size
+  steps_per_epoch = 10
   num_examples = steps_per_epoch * FLAGS.batch_size
-  iterator = eval_data.make_one_shot_iterator()
+  iterator = dataset.make_one_shot_iterator()
   next_element = iterator.get_next()
   for step in xrange(steps_per_epoch):
       x,y = sess.run(next_element)
@@ -91,38 +92,36 @@ def do_eval(sess,
 def run_training():
   """Train STOCk for a number of steps."""
   #df_002024=ts.get_hist_data('002024',start='2014-01-01')
-  df_002024=sohu_dc.get_hist_data('002024','20140101','20171204')
+  df_002024=sohu_dc.get_hist_data('002024','20080101','20171204')
   df_002024_norm=(df_002024-df_002024.min())/(df_002024.max()-df_002024.min())
-
-  df_002024_test=df_002024_norm[0:100]
-  df_002024_train=df_002024_norm[100:df_002024.index.size]
 
   market_data={'train':{},'test':{}}
   market_data['train']['features']=[]
   market_data['train']['lables']=[]
   market_data['test']['features']=[]
   market_data['test']['lables']=[]
+  features=[]
+  lables=[]
 
-  for index in range(df_002024_train.index.size):
-      slice=df_002024_train[df_002024_train.index.size-6-index:df_002024_train.index.size-index]
+  for index in range(df_002024.index.size):
+      slice=df_002024[df_002024.index.size-6-index:df_002024.index.size-index]
       if(slice.index.size<6):
           break
-      market_data['train']['features'].append(slice[1:6].values.flatten())
-      if(slice.close[0]>slice.close[1]):
-          market_data['train']['lables'].append(0)
+      features.append(slice[1:6].values.flatten())
+      if (slice.close[0]-slice.close[1])/slice.close[1]>0.03:
+          lables.append(0)
       else:
-          market_data['train']['lables'].append(1)
+          lables.append(1) 
 
-  for index in range(df_002024_test.index.size):
-      slice=df_002024_test[df_002024_test.index.size-6-index:df_002024_test.index.size-index]
-      if(slice.index.size<6):
-          break
-      market_data['test']['features'].append(slice[1:6].values.flatten())
-      if(slice.close[0]>slice.close[1]):
-          market_data['test']['lables'].append(0)
-      else:
-          market_data['test']['lables'].append(1)
-          
+  test_indexes=np.random.randint(len(features),size=len(features)//10, dtype='int')
+  train_indexes=[x for x in range(len(features)) if x not in test_indexes]
+  print('total %d samples, %d for training, %d for test '%(len(features), len(train_indexes), len(test_indexes)))
+  
+  market_data['train']['features'] = [features[i] for i in train_indexes]
+  market_data['train']['lables'] = [lables[i] for i in train_indexes]
+  market_data['test']['features'] = [features[i] for i in test_indexes]
+  market_data['test']['lables'] = [lables[i] for i in test_indexes]
+
   # Tell TensorFlow that the model will be built into the default Graph.
   with tf.Graph().as_default():
     dataset_train = tf.data.Dataset.from_tensor_slices((np.array(market_data['train']['features']),np.array(market_data['train']['lables'])))
@@ -135,7 +134,7 @@ def run_training():
                                            dataset_train.output_shapes)
     next_element = iterator.get_next()
     training_init_op = iterator.make_initializer(dataset_train)
-    validation_init_op = iterator.make_initializer(dataset_test)
+    #validation_init_op = iterator.make_initializer(dataset_test)
     # Generate placeholders for the images and labels.
     features_placeholder, labels_placeholder = placeholder_inputs(
         FLAGS.batch_size)
@@ -212,14 +211,14 @@ def run_training():
                 eval_correct,
                 features_placeholder,
                 labels_placeholder,
-                market_data['train'])
+                dataset_train)
         # Evaluate against the validation set.
             print('Test Data Eval:')
             do_eval(sess,
                 eval_correct,
                 features_placeholder,
                 labels_placeholder,
-                market_data['test'])
+                dataset_test)
 
 
 def main(_):
@@ -258,7 +257,7 @@ if __name__ == '__main__':
   parser.add_argument(
       '--batch_size',
       type=int,
-      default=25,
+      default=300,
       help='Batch size.  Must divide evenly into the dataset sizes.'
   )
   parser.add_argument(
