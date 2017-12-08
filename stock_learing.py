@@ -104,7 +104,7 @@ def run_training():
   lables=[]
 
   for index in range(df_002024.index.size):
-      slice=df_002024[df_002024.index.size-6-index:df_002024.index.size-index]
+      slice=df_002024_norm[df_002024.index.size-6-index:df_002024.index.size-index]
       if(slice.index.size<6):
           break
       features.append(slice[1:6].values.flatten())
@@ -191,7 +191,7 @@ def run_training():
         
         duration = time.time() - start_time
         
-        if step % 100 == 0:       
+        if step % 1000 == 0:       
                 # Write the summaries and print an overview fairly often.
                 print('Step %d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
                 # Update the events file.
@@ -202,7 +202,7 @@ def run_training():
                 sess.run(training_init_op)
 
         # Save a checkpoint and evaluate the model periodically.
-        if (step + 1) % 1000 == 0 or (step + 1) == FLAGS.max_steps:
+        if (step + 1) % 20000 == 0 or (step + 1) == FLAGS.max_steps:
             checkpoint_file = os.path.join(FLAGS.log_dir, 'model.ckpt')
             saver.save(sess, checkpoint_file, global_step=step)
         # Evaluate against the training set.
