@@ -75,7 +75,7 @@ def do_eval(sess,
 #  eval_data = eval_data.batch(FLAGS.batch_size)
   # And run one epoch of eval.
   true_count = 0  # Counts the number of correct predictions.
-  steps_per_epoch = 10
+  steps_per_epoch = 1
   num_examples = steps_per_epoch * FLAGS.batch_size
   iterator = dataset.make_one_shot_iterator()
   next_element = iterator.get_next()
@@ -93,7 +93,7 @@ def run_training():
   """Train STOCk for a number of steps."""
   #df_002024=ts.get_hist_data('002024',start='2014-01-01')
   df_002024=sohu_dc.get_hist_data('002024','20080101','20171204')
-  df_002024_norm=(df_002024-df_002024.min())/(df_002024.max()-df_002024.min())
+  df_002024_norm=(df_002024-df_002024.mean())/(df_002024.max()-df_002024.min())
 
   market_data={'train':{},'test':{}}
   market_data['train']['features']=[]
@@ -108,8 +108,10 @@ def run_training():
       if(slice.index.size<6):
           break
       features.append(slice[1:6].values.flatten())
-      if (slice.close[0]-slice.close[1])/slice.close[1]>0.03:
+      if (slice.close[0]-slice.close[1])/slice.close[1]>=0.03:
           lables.append(0)
+      if (slice.close[0]-slice.close[1])/slice.close[1]<=-0.03:
+          lables.append(2)
       else:
           lables.append(1) 
 

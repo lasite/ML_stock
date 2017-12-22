@@ -21,13 +21,14 @@ def get_market_data(code,start,end,is_index=False):
     lines = lines.decode('gb2312')
     js = json.loads(lines[22:-3])
     df = pd.DataFrame(js['hq'], columns=cols)
-    df = df.applymap(lambda x:x.strip('%'))
-    df = df.applymap(lambda x: x.replace(u'-', u''))
-    df[df==''] = 0
-    for col in cols[1:]:
-        df[col]=df[col].astype(float)
     df = df.set_index('date')
     df = df.sort_index(ascending = False)
+    if is_index:
+        df=df[cols[1:-1]]
+    df = df.applymap(lambda x:x.strip('%'))
+    df[df==''] = 0
+    for col in df.columns:
+        df[col]=df[col].astype(float)
     return df
 
 def get_hist_data(code,start,end,with_index=True):

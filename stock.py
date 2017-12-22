@@ -1,6 +1,6 @@
 import math
 import tensorflow as tf
-NUM_CLASSES=2
+NUM_CLASSES=3
 PERIOD_SIZE=5
 FEATURE_SIZE=17
 NUM_FEATURES=PERIOD_SIZE * FEATURE_SIZE
@@ -89,6 +89,14 @@ def training(loss, learning_rate):
   train_op = optimizer.minimize(loss, global_step=global_step)
   return train_op
 
+def prediction(logits):
+    predict=tf.nn.softmax(logits)
+    values, indices = tf.nn.top_k(predict, NUM_CLASSES)
+    table = tf.contrib.lookup.index_to_string_table_from_tensor(
+            tf.constant(['up','down']))
+    prediction_classes = table.lookup(tf.to_int64(indices),name='prediction_classes')
+    prediction = tf.tuple([prediction_classes,values],name='prediction')
+    return prediction
 def evaluation(logits, labels):
   """Evaluate the quality of the logits at predicting the label.
 
